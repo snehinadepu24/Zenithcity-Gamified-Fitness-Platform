@@ -1,0 +1,318 @@
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Calendar, Dumbbell, Clock, Target, Zap,
+  Play, RefreshCw, Trophy,
+} from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { api } from '../services/api';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+
+interface Exercise {
+  type: string;
+  name: string;
+  sets: number;
+  reps: number;
+  duration_seconds?: number;
+  rest_seconds: number;
+  notes: string;
+}
+
+interface PlanDay {
+  day: string;
+  focus: string;
+  exercises: Exercise[];
+}
+
+interface WorkoutPlan {
+  goal: string;
+  level: string;
+  days_per_week: number;
+  plan: PlanDay[];
+  diet_plan?: string[];
+  tips: string[];
+}
+
+const EXERCISE_EMOJIS: Record<string, string> = {
+  squat: '🏋️', pushup: '💪', lunge: '🦵', plank: '🧘',
+  jumping_jack: '⚡', cardio: '🏃', running: '🏃', walking: '🚶',
+};
+
+const DAY_COLORS: Record<string, string> = {
+  Monday: 'neon-cyan', Tuesday: 'neon-orange', Wednesday: 'neon-green',
+  Thursday: 'neon-purple', Friday: 'neon-pink', Saturday: 'neon-yellow', Sunday: 'neon-cyan',
+};
+
+function formatDuration(secs: number): string {
+  if (secs >= 60) return `${Math.floor(secs / 60)} min`;
+  return `${secs}s`;
+}
+
+export default function WorkoutPlanPage() {
+  const navigate = useNavigate();
+  const [plan, setPlan] = useState<WorkoutPlan | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
+
+  const fetchPlan = async (forceRefresh = false) => {
+    try {
+      const data = await api.get(`/workout-plan${forceRefresh ? '?force=true' : ''}`);
+      setPlan(data);
+    } catch (err) {
+      console.error('Failed to fetch plan:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchPlan(); }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchPlan(true);
+    setRefreshing(false);
+  };
+
+  const handleUpgrade = async () => {
+    if (!window.confirm(`Ready to upgrade your fitness level to the next tier?`)) return;
+    setUpgrading(true);
+    try {
+      await api.post('/workout-plan/upgrade', {});
+      await fetchPlan(true); // Regenerate plan for next level
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
+  const handleExerciseClick = (exerciseType: string) => {
+    navigate(`/workout?exercise=${exerciseType}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex flex-col items-center gap-4">
+          <LoadingSpinner size="lg" />
+          <p className="text-space-400 font-mono text-sm">Generating your workout plan...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!plan) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex flex-col items-center gap-4">
+          <LoadingSpinner size="lg" />
+          <p className="text-space-400 font-mono text-sm">Loading your workout plan...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
+  return (
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-4 sm:space-y-6">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-start justify-between"
+      >
+        <div>
+          <h1 className="text-xl sm:text-2xl font-display font-bold text-white">Your Workout Plan</h1>
+          <p className="text-space-400 text-sm mt-0.5">
+            Personalized for <span className="text-neon-cyan font-semibold">{plan.goal}</span> &bull; {plan.level} level
+          </p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="glass-sm px-3 py-2 rounded-xl flex items-center gap-2 text-space-400 hover:text-white transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <span className="text-xs font-mono">Refresh</span>
+        </button>
+      </motion.div>
+
+      {/* Plan overview */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="grid grid-cols-3 gap-2 sm:gap-3"
+      >
+        <div className="glass-sm p-4 text-center rounded-xl">
+          <Target className="w-5 h-5 text-neon-cyan mx-auto mb-2" />
+          <p className="font-display font-bold text-white text-sm sm:text-lg">{plan.goal}</p>
+          <p className="text-xs text-space-500">Goal</p>
+        </div>
+        <div className="glass-sm p-4 text-center rounded-xl">
+          <Calendar className="w-5 h-5 text-neon-orange mx-auto mb-2" />
+          <p className="font-display font-bold text-white text-sm sm:text-lg">{plan.days_per_week}</p>
+          <p className="text-xs text-space-500">Days / Week</p>
+        </div>
+        <div className="glass-sm p-4 text-center rounded-xl">
+          <Zap className="w-5 h-5 text-neon-yellow mx-auto mb-2" />
+          <p className="font-display font-bold text-white text-sm sm:text-lg capitalize">{plan.level}</p>
+          <p className="text-xs text-space-500">Level</p>
+        </div>
+      </motion.div>
+
+      {/* Daily plans */}
+      <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 touch-scroll scrollbar-hide">
+        {plan.plan.map((day, i) => {
+          const isToday = day.day === today;
+          const color = DAY_COLORS[day.day] || 'neon-cyan';
+
+          return (
+            <motion.div
+              key={day.day}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className={`glass flex flex-col min-w-[85vw] sm:min-w-[340px] snap-center flex-shrink-0 ${isToday ? `border border-${color}/40 ring-1 ring-${color}/20 bg-space-800/60` : 'bg-space-900/40'}`}
+            >
+              <div className="p-4 border-b border-white/5 bg-space-800/30">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                    isToday ? `bg-${color}/20 text-${color}` : 'bg-space-800 border border-space-700 text-space-400'
+                  }`}>
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className={`font-display font-bold text-lg ${isToday ? `text-${color}` : 'text-white'}`}>
+                      {day.day}
+                      {isToday && (
+                        <span className="ml-2 text-[10px] font-mono bg-neon-cyan/20 text-neon-cyan px-2 py-0.5 rounded-full align-middle">
+                          TODAY
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-xs text-space-400 mt-0.5">{day.focus} &bull; {day.exercises.length} exercises</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 space-y-3 flex-1 overflow-y-auto">
+                <p className="text-[10px] text-space-500 font-mono uppercase tracking-widest mb-1">Workout Regimen</p>
+                {day.exercises.map((ex, j) => (
+                  <button
+                    key={j}
+                    onClick={() => handleExerciseClick(ex.type)}
+                    className="w-full flex items-center gap-3 p-3 glass-sm rounded-xl border border-transparent hover:border-neon-cyan/30 hover:bg-neon-cyan/5 transition-all text-left group"
+                  >
+                    <span className="text-2xl flex-shrink-0 w-10 text-center">
+                      {EXERCISE_EMOJIS[ex.type] || '🏋️'}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white group-hover:text-neon-cyan transition-colors truncate">
+                        {ex.name}
+                      </p>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-space-400 font-mono">
+                        {ex.duration_seconds ? (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-neon-cyan" /> {formatDuration(ex.duration_seconds)}
+                          </span>
+                        ) : (
+                          <span className="text-neon-orange">{ex.sets} x {ex.reps} reps</span>
+                        )}
+                        {ex.rest_seconds > 0 && (
+                          <span className="text-space-500">{ex.rest_seconds}s rest</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-space-500 mt-1 leading-tight">{ex.notes}</p>
+                    </div>
+                    <Play className="w-4 h-4 text-space-600 group-hover:text-neon-cyan transition-colors flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
+
+              {isToday && day.exercises.length > 0 && (
+                <div className="p-4 border-t border-white/5 bg-space-800/30">
+                  <Link
+                    to={`/workout?exercise=${day.exercises[0].type || 'squat'}`}
+                    className="btn-primary w-full flex items-center justify-center gap-2 py-3 shadow-lg shadow-neon-cyan/10"
+                  >
+                    <Dumbbell className="w-4 h-4" /> Start Today's Plan
+                  </Link>
+                </div>
+              )}
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Diet Plan */}
+      {plan.diet_plan && plan.diet_plan.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="glass p-5 space-y-3 border border-neon-orange/20"
+        >
+          <h3 className="font-display font-semibold text-sm uppercase tracking-widest text-white flex items-center gap-2">
+            <span className="text-neon-orange text-lg">🥗</span>
+            Nutrition &amp; Diet Guidelines
+          </h3>
+          <div className="space-y-3 mt-2">
+            {plan.diet_plan.map((tip, i) => (
+              <div key={i} className="flex items-start gap-3 bg-space-800/30 p-3 rounded-lg border border-space-700/50">
+                <span className="text-neon-orange mt-0.5">•</span>
+                <span className="text-sm text-space-300 leading-relaxed">{tip}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Tips */}
+      {plan.tips.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="glass p-5 space-y-3"
+        >
+          <h3 className="font-display font-semibold text-sm uppercase tracking-widest text-white flex items-center gap-2">
+            <Zap className="w-4 h-4 text-neon-yellow" />
+            Pro Tips
+          </h3>
+          <div className="space-y-2">
+            {plan.tips.map((tip, i) => (
+              <div key={i} className="flex items-start gap-2.5 text-xs text-space-400">
+                <span className="text-neon-yellow mt-0.5">•</span>
+                <span>{tip}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Upgrade Call to Action */}
+      {plan.level !== 'advanced' && (
+        <motion.div
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           className="glass p-6 text-center space-y-4 border border-neon-cyan/20 bg-neon-cyan/5"
+        >
+          <div className="flex flex-col items-center gap-2">
+            <Trophy className="w-10 h-10 text-neon-yellow" />
+            <h3 className="text-lg font-display font-bold text-white uppercase tracking-wider">Ready for the next challenge?</h3>
+            <p className="text-sm text-space-400 max-w-md mx-auto">
+              If you have smashed this week's goals, upgrade your account to the <span className="text-neon-cyan uppercase font-bold">{plan.level === 'beginner' ? 'Intermediate' : 'Advanced'}</span> level to get more intense AI-generated plans.
+            </p>
+          </div>
+          <button 
+            onClick={handleUpgrade}
+            disabled={upgrading}
+            className="btn-primary px-8 py-3 flex items-center gap-2 mx-auto"
+          >
+            {upgrading ? <LoadingSpinner size="sm" /> : <><Zap className="w-4 h-4" /> LEVEL UP YOUR AI PLAN</>}
+          </button>
+        </motion.div>
+      )}
+    </div>
+  );
+}
