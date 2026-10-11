@@ -12,7 +12,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
-import { CheckCircle, AlertCircle, Eye } from 'lucide-react';
+import { CheckCircle, AlertCircle, Eye, Volume2, VolumeX } from 'lucide-react';
 import { AIStats } from '../pages/WorkoutPage';
 import { getSocket } from '../services/socket';
 
@@ -624,6 +624,19 @@ export default function PoseDetector({ stream, exerciseType, isActive, onStatsUp
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [repFlash, setRepFlash] = useState(false);
+  const [speechMuted, setSpeechMuted] = useState(false);
+  const speechMutedRef = useRef(false);
+
+  useEffect(() => {
+    speechMutedRef.current = speechMuted;
+    if (speechMuted && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+  }, [speechMuted]);
+
+  useEffect(() => () => {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  }, []);
 
   // Keep activeRef in sync and initialize start time when it becomes active
   useEffect(() => {
@@ -797,7 +810,7 @@ export default function PoseDetector({ stream, exerciseType, isActive, onStatsUp
         setFeedback(stableAnalysis.feedback);
 
         // Voice Coaching: Speak feedback if form is poor
-        if (activeRef.current && stableAnalysis.formScore < 0.85 && stableAnalysis.feedback !== 'Tracking...') {
+        if (!speechMutedRef.current && activeRef.current && stableAnalysis.formScore < 0.85 && stableAnalysis.feedback !== 'Tracking...') {
           if (stableAnalysis.feedback !== lastSpokenFeedback.current || (now - lastSpokenTime.current > 5000)) {
             lastSpokenFeedback.current = stableAnalysis.feedback;
             lastSpokenTime.current = now;
@@ -908,6 +921,17 @@ export default function PoseDetector({ stream, exerciseType, isActive, onStatsUp
             <div className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
             <span className="text-xs font-mono font-bold">AI TRACKING</span>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setSpeechMuted(muted => !muted)}
+            aria-label={speechMuted ? 'Unmute voice coaching' : 'Mute voice coaching'}
+            aria-pressed={speechMuted}
+            title={speechMuted ? 'Unmute voice coaching' : 'Mute voice coaching'}
+            className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center justify-center w-8 h-8 rounded-lg border bg-space-900/70 border-space-500/50 text-white hover:border-neon-cyan/60 hover:text-neon-cyan transition-colors"
+          >
+            {speechMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
 
           {/* Form score badge */}
           <div className={`absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold transition-colors ${good
