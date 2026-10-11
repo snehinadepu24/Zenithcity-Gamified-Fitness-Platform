@@ -20,11 +20,11 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import * as THREE from 'three';
 
 const BUILDING_TYPES = [
-  { id: 'house',     label: 'House',     cost: 100,  emoji: '🏠', desc: 'Starter dwelling' },
-  { id: 'park',      label: 'Park',      cost: 300,  emoji: '🌳', desc: 'Green space' },
-  { id: 'apartment', label: 'Apartment', cost: 500,  emoji: '🏢', desc: 'Multi-family' },
-  { id: 'office',    label: 'Office',    cost: 1000, emoji: '🏬', desc: 'Commercial hub' },
-  { id: 'stadium',   label: 'Stadium',   cost: 5000, emoji: '🏟️', desc: 'Epic venue' },
+  { id: 'house', label: 'House', cost: 100, emoji: '🏠', desc: 'Starter dwelling' },
+  { id: 'park', label: 'Park', cost: 300, emoji: '🌳', desc: 'Green space' },
+  { id: 'apartment', label: 'Apartment', cost: 500, emoji: '🏢', desc: 'Multi-family' },
+  { id: 'office', label: 'Office', cost: 1000, emoji: '🏬', desc: 'Commercial hub' },
+  { id: 'stadium', label: 'Stadium', cost: 5000, emoji: '🏟️', desc: 'Epic venue' },
 ];
 
 interface SelectedBuilding {
@@ -85,7 +85,7 @@ export default function CityPage() {
   const [placementMode, setPlacementMode] = useState(null);
   const [isDragMode, setIsDragMode] = useState(false);
   const [position] = useState({ x: 0, y: 0, z: 0 });
-  
+
   const dispatch = useDispatch<AppDispatch>();
   const { city, loading, buildingPanelOpen } = useSelector((s: RootState) => s.city);
   const { user } = useSelector((s: RootState) => s.auth);
@@ -133,7 +133,7 @@ export default function CityPage() {
       type: placementType,
       position_x: x,
       position_y: 0,
-      position_z: position.z,
+      position_z: z,
     }));
 
     setConstructing(false);
@@ -148,7 +148,7 @@ export default function CityPage() {
   }, [placementType, dispatch]);
 
   const handlePlacementCancel = () => {
-    setPlacementMode(null);
+    setPlacementType(null);
   };
 
   const handleBuildingMove = async (buildingId: string, position: { x: number, z: number }) => {
@@ -218,9 +218,9 @@ export default function CityPage() {
     dispatch(addToast({ type: 'success', message: `💥 ${b?.type ?? 'Building'} demolished!` }));
   }, [demolishingId, city, dispatch]);
 
-  const completedBuildings    = city?.buildings?.filter(b => b.status === 'completed') || [];
+  const completedBuildings = city?.buildings?.filter(b => b.status === 'completed') || [];
   const constructingBuildings = city?.buildings?.filter(b => b.status === 'under_construction') || [];
-  const damagedBuildings      = city?.buildings?.filter(b => b.status === 'damaged') || [];
+  const damagedBuildings = city?.buildings?.filter(b => b.status === 'damaged') || [];
 
   if (loading && !city) {
     return <div className="flex items-center justify-center h-full"><LoadingSpinner size="lg" /></div>;
@@ -246,13 +246,14 @@ export default function CityPage() {
               shadow-mapSize={[2048, 2048]}
               shadow-camera-far={120}
               shadow-camera-left={-40} shadow-camera-right={40}
-              shadow-camera-top={40}  shadow-camera-bottom={-40}
+              shadow-camera-top={40} shadow-camera-bottom={-40}
             />
             <pointLight position={[-18, 12, -12]} color="#00F5FF" intensity={isDay ? 0.4 : 1.8} distance={50} />
-            <pointLight position={[18, 8, 12]}    color="#B24BF3" intensity={isDay ? 0.3 : 1.2} distance={45} />
+            <pointLight position={[18, 8, 12]} color="#B24BF3" intensity={isDay ? 0.3 : 1.2} distance={45} />
             <City3D
               buildings={city?.buildings || []}
               territorySize={city?.territory_size || 100}
+              existingBuildings={city?.buildings || []}
               placementType={placementType}
               onPlace={handlePlace}
               onBuildingClick={handleBuildingClick}
@@ -295,11 +296,10 @@ export default function CityPage() {
               <button
                 key={mode}
                 onClick={() => setLightMode(mode)}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono transition-all ${
-                  lightMode === mode
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono transition-all ${lightMode === mode
                     ? 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30'
                     : 'text-space-400 hover:text-white'
-                }`}
+                  }`}
               >
                 {mode === 'day' && <Sun className="w-3 h-3" />}
                 {mode === 'night' && <Moon className="w-3 h-3" />}
@@ -399,10 +399,10 @@ export default function CityPage() {
                     <span className="text-space-400">Status</span>
                     <span className={
                       selectedBuilding.status === 'completed' ? 'text-neon-green' :
-                      selectedBuilding.status === 'under_construction' ? 'text-neon-yellow' : 'text-neon-pink'
+                        selectedBuilding.status === 'under_construction' ? 'text-neon-yellow' : 'text-neon-pink'
                     }>
                       {selectedBuilding.status === 'under_construction' ? 'Building...' :
-                       selectedBuilding.status === 'damaged' ? 'Damaged' : 'Active'}
+                        selectedBuilding.status === 'damaged' ? 'Damaged' : 'Active'}
                     </span>
                   </div>
                 </div>
@@ -450,11 +450,10 @@ export default function CityPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`px-4 py-2 text-xs font-display font-semibold tracking-wider uppercase rounded-lg transition-all ${
-                      activeTab === tab.id
+                    className={`px-4 py-2 text-xs font-display font-semibold tracking-wider uppercase rounded-lg transition-all ${activeTab === tab.id
                         ? 'bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/30'
                         : 'text-space-400 hover:text-white'
-                    }`}
+                      }`}
                   >
                     {tab.label}
                   </button>
@@ -473,13 +472,12 @@ export default function CityPage() {
                         <button
                           key={bt.id}
                           onClick={() => setSelectedType(bt.id)}
-                          className={`relative p-3 rounded-xl border text-left transition-all ${
-                            isSelected
+                          className={`relative p-3 rounded-xl border text-left transition-all ${isSelected
                               ? 'border-neon-cyan/60 bg-neon-cyan/8 ring-1 ring-neon-cyan/20'
                               : affordable
                                 ? 'border-space-600/40 hover:border-space-400 hover:bg-white/3'
                                 : 'border-space-700/30 opacity-50 cursor-not-allowed'
-                          }`}
+                            }`}
                           disabled={!affordable}
                           title={!affordable ? `Need ${bt.cost - balance} more points` : ''}
                         >
@@ -522,11 +520,10 @@ export default function CityPage() {
                     <button
                       onClick={handleStartPlacement}
                       disabled={constructing || !canAffordSelected}
-                      className={`px-6 py-3 rounded-xl font-display font-semibold text-sm uppercase tracking-widest flex items-center gap-2 transition-all ${
-                        canAffordSelected && !placementMode
+                      className={`px-6 py-3 rounded-xl font-display font-semibold text-sm uppercase tracking-widest flex items-center gap-2 transition-all ${canAffordSelected && !placementMode
                           ? 'btn-primary'
                           : 'bg-space-800/50 border border-space-700/30 text-space-600 cursor-not-allowed'
-                      }`}
+                        }`}
                     >
                       {constructing
                         ? <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
@@ -567,11 +564,10 @@ export default function CityPage() {
                     </div>
                     <button
                       onClick={() => setIsDragMode(!isDragMode)}
-                      className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                        isDragMode
+                      className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${isDragMode
                           ? 'bg-neon-green/20 border border-neon-green/40 text-neon-green'
                           : 'bg-space-700/50 border border-space-600/40 text-space-300 hover:bg-space-600/50'
-                      }`}
+                        }`}
                     >
                       {isDragMode ? '✓ Drag Mode ON' : 'Enable Drag Mode'}
                     </button>
@@ -587,122 +583,120 @@ export default function CityPage() {
                   )}
 
                   <div className="max-h-52 overflow-y-auto space-y-2 pr-1">
-                  {/* Under construction */}
-                  {constructingBuildings.length > 0 && (
-                    <>
-                      <p className="text-xs text-neon-yellow font-mono uppercase tracking-widest px-1">
-                        🏗️ Under Construction ({constructingBuildings.length})
-                      </p>
-                      {constructingBuildings.map(b => (
-                        <div key={b.id} className="flex items-center gap-3 p-2.5 glass-sm rounded-lg border border-neon-yellow/15">
-                          <div className="w-8 h-8 rounded-lg bg-neon-yellow/10 border border-neon-yellow/20 flex items-center justify-center text-sm flex-shrink-0">
-                            {BUILDING_TYPES.find(t => t.id === b.type)?.emoji}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-white capitalize">{b.type}</p>
-                            <div className="flex items-center gap-1.5 text-xs text-space-400 mt-0.5">
-                              <Clock className="w-3 h-3" />
-                              <BuildingCountdown completedAt={b.construction_completed_at} />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  )}
-
-                  {/* Damaged */}
-                  {damagedBuildings.length > 0 && (
-                    <>
-                      <p className="text-xs text-neon-pink font-mono uppercase tracking-widest px-1 mt-2">
-                        ⚠️ Damaged ({damagedBuildings.length})
-                      </p>
-                      {damagedBuildings.map(b => (
-                        <div key={b.id} className="flex items-center gap-3 p-2.5 glass-sm rounded-lg border border-neon-pink/25">
-                          <AlertTriangle className="w-4 h-4 text-neon-pink flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-white capitalize">{b.type} — Lvl {b.level}</p>
-                            <p className="text-xs text-neon-pink font-mono">200 pts to repair</p>
-                          </div>
-                          <button
-                            onClick={() => handleRepair(b.id)}
-                            disabled={balance < 200}
-                            className={`text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all ${
-                              balance >= 200
-                                ? 'bg-neon-pink/10 border border-neon-pink/40 text-neon-pink hover:bg-neon-pink/20'
-                                : 'bg-space-800 border border-space-700 text-space-600 cursor-not-allowed'
-                            }`}
-                          >
-                            <Wrench className="w-3 h-3" /> Repair
-                          </button>
-                          <button
-                            onClick={() => handleDelete(b.id, b.type)}
-                            className="text-xs px-2 py-1.5 rounded-lg flex items-center gap-1 bg-space-800 border border-space-700 text-space-500 hover:border-neon-pink/40 hover:text-neon-pink transition-all"
-                            title="Demolish"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </>
-                  )}
-
-                  {/* Completed */}
-                  {completedBuildings.length > 0 && (
-                    <>
-                      <p className="text-xs text-neon-green font-mono uppercase tracking-widest px-1 mt-2">
-                        ✅ Completed ({completedBuildings.length})
-                      </p>
-                      {completedBuildings.map(b => {
-                        const cfg = BUILDING_TYPES.find(t => t.id === b.type)!;
-                        const upgradeCost = cfg ? Math.floor(cfg.cost * Math.pow(1.5, b.level)) : 9999;
-                        const canUpgrade = b.level < 3 && balance >= upgradeCost;
-                        const atMaxLevel = b.level >= 3;
-
-                        return (
-                          <div key={b.id} className="flex items-center gap-3 p-2.5 glass-sm rounded-lg">
-                            <div className="w-8 h-8 rounded-lg bg-neon-green/10 border border-neon-green/20 flex items-center justify-center text-sm flex-shrink-0">
-                              {cfg?.emoji}
+                    {/* Under construction */}
+                    {constructingBuildings.length > 0 && (
+                      <>
+                        <p className="text-xs text-neon-yellow font-mono uppercase tracking-widest px-1">
+                          🏗️ Under Construction ({constructingBuildings.length})
+                        </p>
+                        {constructingBuildings.map(b => (
+                          <div key={b.id} className="flex items-center gap-3 p-2.5 glass-sm rounded-lg border border-neon-yellow/15">
+                            <div className="w-8 h-8 rounded-lg bg-neon-yellow/10 border border-neon-yellow/20 flex items-center justify-center text-sm flex-shrink-0">
+                              {BUILDING_TYPES.find(t => t.id === b.type)?.emoji}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-white capitalize">{b.type}</p>
-                              <div className="flex items-center gap-2 text-xs font-mono text-space-400 mt-0.5">
-                                <span className="flex items-center gap-0.5">
-                                  <Layers className="w-3 h-3" /> Lvl {b.level}
-                                </span>
-                                <span className="flex items-center gap-0.5">
-                                  <Shield className="w-3 h-3" /> {b.health}%
-                                </span>
+                              <div className="flex items-center gap-1.5 text-xs text-space-400 mt-0.5">
+                                <Clock className="w-3 h-3" />
+                                <BuildingCountdown completedAt={b.construction_completed_at} />
                               </div>
                             </div>
-
-                            {atMaxLevel ? (
-                              <span className="text-xs text-neon-cyan font-mono px-2 py-1 bg-neon-cyan/10 rounded-lg">MAX</span>
-                            ) : (
-                              <button
-                                onClick={() => handleUpgrade(b.id, b.type, b.level)}
-                                disabled={!canUpgrade}
-                                title={!canUpgrade ? `Need ${upgradeCost} pts` : `Upgrade for ${upgradeCost} pts`}
-                                className={`text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all ${
-                                  canUpgrade
-                                    ? 'bg-space-700/50 border border-space-500/50 text-white hover:border-neon-cyan/40 hover:text-neon-cyan'
-                                    : 'bg-space-800 border border-space-700 text-space-600 cursor-not-allowed'
-                                }`}
-                              >
-                                <ArrowUp className="w-3 h-3" />
-                                {canUpgrade ? `${upgradeCost}pts` : <Lock className="w-3 h-3" />}
-                              </button>
-                            )}
                           </div>
-                        );
-                      })}
-                    </>
-                  )}
+                        ))}
+                      </>
+                    )}
 
-                  {city?.buildings?.length === 0 && (
-                    <div className="text-center py-6 text-space-500 text-sm">
-                      No buildings yet — earn points and start building!
-                    </div>
-                  )}
+                    {/* Damaged */}
+                    {damagedBuildings.length > 0 && (
+                      <>
+                        <p className="text-xs text-neon-pink font-mono uppercase tracking-widest px-1 mt-2">
+                          ⚠️ Damaged ({damagedBuildings.length})
+                        </p>
+                        {damagedBuildings.map(b => (
+                          <div key={b.id} className="flex items-center gap-3 p-2.5 glass-sm rounded-lg border border-neon-pink/25">
+                            <AlertTriangle className="w-4 h-4 text-neon-pink flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-white capitalize">{b.type} — Lvl {b.level}</p>
+                              <p className="text-xs text-neon-pink font-mono">200 pts to repair</p>
+                            </div>
+                            <button
+                              onClick={() => handleRepair(b.id)}
+                              disabled={balance < 200}
+                              className={`text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all ${balance >= 200
+                                  ? 'bg-neon-pink/10 border border-neon-pink/40 text-neon-pink hover:bg-neon-pink/20'
+                                  : 'bg-space-800 border border-space-700 text-space-600 cursor-not-allowed'
+                                }`}
+                            >
+                              <Wrench className="w-3 h-3" /> Repair
+                            </button>
+                            <button
+                              onClick={() => handleDelete(b.id, b.type)}
+                              className="text-xs px-2 py-1.5 rounded-lg flex items-center gap-1 bg-space-800 border border-space-700 text-space-500 hover:border-neon-pink/40 hover:text-neon-pink transition-all"
+                              title="Demolish"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Completed */}
+                    {completedBuildings.length > 0 && (
+                      <>
+                        <p className="text-xs text-neon-green font-mono uppercase tracking-widest px-1 mt-2">
+                          ✅ Completed ({completedBuildings.length})
+                        </p>
+                        {completedBuildings.map(b => {
+                          const cfg = BUILDING_TYPES.find(t => t.id === b.type)!;
+                          const upgradeCost = cfg ? Math.floor(cfg.cost * Math.pow(1.5, b.level)) : 9999;
+                          const canUpgrade = b.level < 3 && balance >= upgradeCost;
+                          const atMaxLevel = b.level >= 3;
+
+                          return (
+                            <div key={b.id} className="flex items-center gap-3 p-2.5 glass-sm rounded-lg">
+                              <div className="w-8 h-8 rounded-lg bg-neon-green/10 border border-neon-green/20 flex items-center justify-center text-sm flex-shrink-0">
+                                {cfg?.emoji}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-white capitalize">{b.type}</p>
+                                <div className="flex items-center gap-2 text-xs font-mono text-space-400 mt-0.5">
+                                  <span className="flex items-center gap-0.5">
+                                    <Layers className="w-3 h-3" /> Lvl {b.level}
+                                  </span>
+                                  <span className="flex items-center gap-0.5">
+                                    <Shield className="w-3 h-3" /> {b.health}%
+                                  </span>
+                                </div>
+                              </div>
+
+                              {atMaxLevel ? (
+                                <span className="text-xs text-neon-cyan font-mono px-2 py-1 bg-neon-cyan/10 rounded-lg">MAX</span>
+                              ) : (
+                                <button
+                                  onClick={() => handleUpgrade(b.id, b.type, b.level)}
+                                  disabled={!canUpgrade}
+                                  title={!canUpgrade ? `Need ${upgradeCost} pts` : `Upgrade for ${upgradeCost} pts`}
+                                  className={`text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all ${canUpgrade
+                                      ? 'bg-space-700/50 border border-space-500/50 text-white hover:border-neon-cyan/40 hover:text-neon-cyan'
+                                      : 'bg-space-800 border border-space-700 text-space-600 cursor-not-allowed'
+                                    }`}
+                                >
+                                  <ArrowUp className="w-3 h-3" />
+                                  {canUpgrade ? `${upgradeCost}pts` : <Lock className="w-3 h-3" />}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+
+                    {city?.buildings?.length === 0 && (
+                      <div className="text-center py-6 text-space-500 text-sm">
+                        No buildings yet — earn points and start building!
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

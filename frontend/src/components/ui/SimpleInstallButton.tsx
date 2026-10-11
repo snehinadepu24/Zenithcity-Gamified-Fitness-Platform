@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { MouseEvent } from 'react';
 import { Download, Smartphone, Plus, Share, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -10,12 +11,12 @@ interface BeforeInstallPromptEvent extends Event {
 export default function SimpleInstallButton() {
   const [showModal, setShowModal] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  
+
   // Detect platform
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isAndroid = /Android/.test(navigator.userAgent);
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                      (window.navigator as any).standalone === true;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true;
 
   // Don't show if already installed
   if (isStandalone) return null;
@@ -40,14 +41,14 @@ export default function SimpleInstallButton() {
 
   const handleClick = async () => {
     console.log('Install button clicked, deferredPrompt:', !!deferredPrompt);
-    
+
     if (deferredPrompt) {
       // Chrome/Edge automatic install
       try {
         await deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         console.log('Install outcome:', outcome);
-        
+
         if (outcome === 'accepted') {
           console.log('User accepted the install prompt');
         } else {
@@ -91,7 +92,7 @@ export default function SimpleInstallButton() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               className="bg-space-900 border border-space-700 rounded-2xl p-6 max-w-md w-full"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">

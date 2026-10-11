@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, Smartphone, Plus, Share, Menu } from 'lucide-react';
 
@@ -25,8 +26,8 @@ export default function PWAInstallBanner() {
     setIsAndroid(android);
 
     // Detect if already installed as PWA
-    const standalone = window.matchMedia('(display-mode: standalone)').matches || 
-                     (window.navigator as any).standalone === true;
+    const standalone = window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true;
     setIsStandalone(standalone);
 
     // Check if already dismissed
@@ -66,14 +67,14 @@ export default function PWAInstallBanner() {
 
   const handleInstall = async () => {
     console.log('Install button clicked');
-    
+
     if (deferredPrompt) {
       // Chrome/Edge automatic install
       try {
         await deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         console.log('Install outcome:', outcome);
-        
+
         if (outcome === 'accepted') {
           setShowBanner(false);
           localStorage.setItem('pwa-install-dismissed', 'true');
@@ -120,11 +121,11 @@ export default function PWAInstallBanner() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white">Install ZenithCity</p>
                 <p className="text-xs text-space-400">
-                  {isIOS 
-                    ? 'Tap for installation steps' 
+                  {isIOS
+                    ? 'Tap for installation steps'
                     : isAndroid
-                    ? 'Add to home screen for best experience'
-                    : 'Install for offline access'
+                      ? 'Add to home screen for best experience'
+                      : 'Install for offline access'
                   }
                 </p>
               </div>
@@ -163,7 +164,7 @@ export default function PWAInstallBanner() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               className="bg-space-900 border border-space-700 rounded-2xl p-6 max-w-md w-full"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-white">Install ZenithCity</h3>
@@ -246,7 +247,7 @@ export default function PWAInstallBanner() {
                   <p className="text-sm text-space-300">Install from your browser:</p>
                   <div className="p-3 bg-space-800 rounded-lg">
                     <p className="text-sm text-white">
-                      Look for the <strong>install icon</strong> in your browser's address bar, 
+                      Look for the <strong>install icon</strong> in your browser's address bar,
                       or check the browser menu for <strong>"Install ZenithCity"</strong> option.
                     </p>
                   </div>

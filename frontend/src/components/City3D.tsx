@@ -14,10 +14,9 @@ import React, { useRef, useMemo, Suspense, useEffect, useState, useCallback } fr
 import { useFrame, useThree } from '@react-three/fiber';
 import { useGLTF, Float } from '@react-three/drei';
 import * as THREE from 'three';
+import { isValidBuildingPosition } from '../utils/buildingSpecs';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-import DraggableBuilding from './DraggableBuilding';
-import SimpleBuildingPlacer from './SimpleBuildingPlacer';
 
 interface BuildingData {
   id: string; type: string; level: number;
@@ -38,11 +37,11 @@ function makeWindowTexture(cols: number, rows: number, litColor: string, frameCo
 
   const cw = W / cols, rh = H / rows;
   const pad = 4;
-  
+
   // Calculate lighting probability based on time of day
   const hour = timeOfDay % 24;
   let lightProbability = 0.25; // Default
-  
+
   if (hour >= 6 && hour < 9) {
     // Morning - some lights on
     lightProbability = 0.4;
@@ -204,10 +203,10 @@ function Apartment({ level, damaged, timeOfDay = 12 }: { level: number; damaged:
 
       {/* Window grids — all 4 faces */}
       {[
-        { pos: [0, 0.4 + totalH / 2, d / 2 + 0.01] as [number,number,number], rot: [0, 0, 0] as [number,number,number] },
-        { pos: [0, 0.4 + totalH / 2, -d / 2 - 0.01] as [number,number,number], rot: [0, Math.PI, 0] as [number,number,number] },
-        { pos: [w / 2 + 0.01, 0.4 + totalH / 2, 0] as [number,number,number], rot: [0, -Math.PI/2, 0] as [number,number,number] },
-        { pos: [-w / 2 - 0.01, 0.4 + totalH / 2, 0] as [number,number,number], rot: [0, Math.PI/2, 0] as [number,number,number] },
+        { pos: [0, 0.4 + totalH / 2, d / 2 + 0.01] as [number, number, number], rot: [0, 0, 0] as [number, number, number] },
+        { pos: [0, 0.4 + totalH / 2, -d / 2 - 0.01] as [number, number, number], rot: [0, Math.PI, 0] as [number, number, number] },
+        { pos: [w / 2 + 0.01, 0.4 + totalH / 2, 0] as [number, number, number], rot: [0, -Math.PI / 2, 0] as [number, number, number] },
+        { pos: [-w / 2 - 0.01, 0.4 + totalH / 2, 0] as [number, number, number], rot: [0, Math.PI / 2, 0] as [number, number, number] },
       ].map(({ pos, rot }, i) => (
         <mesh key={i} position={pos} rotation={rot}>
           <planeGeometry args={[w * 0.9, totalH * 0.9]} />
@@ -277,12 +276,12 @@ function Office({ level, damaged, timeOfDay = 12 }: { level: number; damaged: bo
 
       {/* Curtain wall window grids */}
       {[
-        { pos: [0, 0.8 + totalH / 2, d / 2 + 0.01] as [number,number,number], tex: winTex },
-        { pos: [0, 0.8 + totalH / 2, -d / 2 - 0.01] as [number,number,number], tex: winTexB },
-        { pos: [w / 2 + 0.01, 0.8 + totalH / 2, 0] as [number,number,number], tex: winTex },
-        { pos: [-w / 2 - 0.01, 0.8 + totalH / 2, 0] as [number,number,number], tex: winTexB },
+        { pos: [0, 0.8 + totalH / 2, d / 2 + 0.01] as [number, number, number], tex: winTex },
+        { pos: [0, 0.8 + totalH / 2, -d / 2 - 0.01] as [number, number, number], tex: winTexB },
+        { pos: [w / 2 + 0.01, 0.8 + totalH / 2, 0] as [number, number, number], tex: winTex },
+        { pos: [-w / 2 - 0.01, 0.8 + totalH / 2, 0] as [number, number, number], tex: winTexB },
       ].map(({ pos, tex }, i) => (
-        <mesh key={i} position={pos} rotation={[0, i >= 2 ? Math.PI/2 : 0, 0]}>
+        <mesh key={i} position={pos} rotation={[0, i >= 2 ? Math.PI / 2 : 0, 0]}>
           <planeGeometry args={[i >= 2 ? d * 0.95 : w * 0.95, totalH * 0.97]} />
           <meshStandardMaterial map={tex} transparent roughness={0.05} metalness={0.8} />
         </mesh>
@@ -331,7 +330,7 @@ function Park({ level, damaged, timeOfDay = 12 }: { level: number; damaged: bool
     }), [treeCount, radius]);
 
   const grassColor = damaged ? '#4A5240' : '#5DAF42';
-  const treeColor  = damaged ? '#3A5030' : '#27882A';
+  const treeColor = damaged ? '#3A5030' : '#27882A';
 
   return (
     <group>
@@ -423,8 +422,8 @@ function Stadium({ level, damaged }: { level: number; damaged: boolean }) {
   const s = 0.9 + level * 0.18;
   const outerR = 5.5 * s;
   const innerR = 3.6 * s;
-  const wallH  = 3.2 * s;
-  const ringH  = wallH * 0.8; // Add missing ringH definition
+  const wallH = 3.2 * s;
+  const ringH = wallH * 0.8; // Add missing ringH definition
   const towerH = wallH + 4.5 * s;
   const towerCount = 4 + level * 2;
 
@@ -433,7 +432,7 @@ function Stadium({ level, damaged }: { level: number; damaged: boolean }) {
     const c = document.createElement('canvas');
     c.width = 512; c.height = 128;
     const ctx = c.getContext('2d')!;
-    const seatColors = ['#c0392b','#2980b9','#27ae60','#f39c12','#8e44ad','#16a085','#e74c3c','#3498db'];
+    const seatColors = ['#c0392b', '#2980b9', '#27ae60', '#f39c12', '#8e44ad', '#16a085', '#e74c3c', '#3498db'];
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, 512, 128);
     // Seat rows
@@ -689,11 +688,11 @@ function Stadium({ level, damaged }: { level: number; damaged: boolean }) {
 
 // ─── GLB Model loader (with error boundary) ───────────────────────────────────
 const MODEL_PATHS: Record<string, string> = {
-  house:     '/models/house.glb',
+  house: '/models/house.glb',
   apartment: '/models/apartment.glb',
-  office:    '/models/office.glb',
-  park:      '/models/park.glb',
-  stadium:   '/models/stadium.glb',
+  office: '/models/office.glb',
+  park: '/models/park.glb',
+  stadium: '/models/stadium.glb',
 };
 
 const LEVEL_SCALES: Record<string, number> = {
@@ -736,7 +735,7 @@ function BuildingContent({ type, level, damaged, timeOfDay = 12 }: { type: strin
     house: House, apartment: Apartment, office: Office, park: Park, stadium: Stadium,
   };
   const Procedural = ProceduralMap[type] || House;
-  
+
   // Always use procedural buildings since GLB models don't exist
   return <Procedural level={level} damaged={damaged} timeOfDay={timeOfDay} />;
 }
@@ -861,8 +860,8 @@ function CityGround({ timeOfDay = 12 }: { timeOfDay?: number }) {
           <mesh key={`sw-l${i}${vert}`}
             rotation={[-Math.PI / 2, 0, vert ? Math.PI / 2 : 0]}
             position={[
-              vert ? i * 10 : -1.8, 
-              0.002, 
+              vert ? i * 10 : -1.8,
+              0.002,
               vert ? -1.8 : i * 10
             ]}>
             <planeGeometry args={[100, 0.8]} />
@@ -872,8 +871,8 @@ function CityGround({ timeOfDay = 12 }: { timeOfDay?: number }) {
           <mesh key={`sw-r${i}${vert}`}
             rotation={[-Math.PI / 2, 0, vert ? Math.PI / 2 : 0]}
             position={[
-              vert ? i * 10 : 1.8, 
-              0.002, 
+              vert ? i * 10 : 1.8,
+              0.002,
               vert ? 1.8 : i * 10
             ]}>
             <planeGeometry args={[100, 0.8]} />
@@ -889,12 +888,12 @@ function CityGround({ timeOfDay = 12 }: { timeOfDay?: number }) {
             rotation={[-Math.PI / 2, 0, vert ? Math.PI / 2 : 0]}
             position={[vert ? i * 10 : 0, 0.003, vert ? 0 : i * 10]}>
             <planeGeometry args={[100, 0.08]} />
-            <meshStandardMaterial 
-              color="#FFFF00" 
-              emissive="#FFFF00" 
-              emissiveIntensity={0.1} 
-              transparent 
-              opacity={0.8} 
+            <meshStandardMaterial
+              color="#FFFF00"
+              emissive="#FFFF00"
+              emissiveIntensity={0.1}
+              transparent
+              opacity={0.8}
             />
           </mesh>
         ))
@@ -908,7 +907,7 @@ function CityGround({ timeOfDay = 12 }: { timeOfDay?: number }) {
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
         const height = 3 + Math.random() * 4;
-        
+
         return (
           <group key={`tree-${i}`} position={[x, 0, z]}>
             {/* Tree trunk */}
@@ -919,9 +918,9 @@ function CityGround({ timeOfDay = 12 }: { timeOfDay?: number }) {
             {/* Tree foliage */}
             <mesh position={[0, height * 0.8, 0]}>
               <sphereGeometry args={[height * 0.4, 8, 6]} />
-              <meshStandardMaterial 
-                color={timeOfDay >= 6 && timeOfDay < 18 ? "#228B22" : "#1a5a1a"} 
-                roughness={0.8} 
+              <meshStandardMaterial
+                color={timeOfDay >= 6 && timeOfDay < 18 ? "#228B22" : "#1a5a1a"}
+                roughness={0.8}
               />
             </mesh>
           </group>
@@ -934,11 +933,11 @@ function CityGround({ timeOfDay = 12 }: { timeOfDay?: number }) {
         const z = (Math.random() - 0.5) * 80;
         // Avoid roads
         if (Math.abs(x % 10) < 2 || Math.abs(z % 10) < 2) return null;
-        
+
         return (
           <group key={`flowers-${i}`} position={[x, 0.05, z]}>
             {Array.from({ length: 2 + Math.random() * 3 }, (_, j) => ( // Reduced flowers per patch
-              <mesh 
+              <mesh
                 key={j}
                 position={[
                   (Math.random() - 0.5) * 2,
@@ -947,7 +946,7 @@ function CityGround({ timeOfDay = 12 }: { timeOfDay?: number }) {
                 ]}
               >
                 <sphereGeometry args={[0.05, 6, 6]} />
-                <meshStandardMaterial 
+                <meshStandardMaterial
                   color={['#ff69b4', '#ffb6c1', '#ffd700', '#ff6347'][Math.floor(Math.random() * 4)]}
                   emissive={['#ff69b4', '#ffb6c1', '#ffd700', '#ff6347'][Math.floor(Math.random() * 4)]}
                   emissiveIntensity={0.2}
@@ -966,15 +965,15 @@ function CityGround({ timeOfDay = 12 }: { timeOfDay?: number }) {
         const z = Math.sin(angle) * radius;
         const height = 5 + Math.random() * 10;
         const width = 20 + Math.random() * 15;
-        
+
         return (
-          <mesh 
+          <mesh
             key={`hill-${i}`}
             position={[x, height / 2, z]}
             rotation={[0, Math.random() * Math.PI, 0]}
           >
             <boxGeometry args={[width, height, width * 0.8]} />
-            <meshStandardMaterial 
+            <meshStandardMaterial
               color="#3d6018"
               roughness={0.9}
               metalness={0.0}
@@ -990,11 +989,11 @@ function CityGround({ timeOfDay = 12 }: { timeOfDay?: number }) {
         // Avoid roads and building areas
         if (Math.abs(x % 10) < 3 || Math.abs(z % 10) < 3) return null;
         if (Math.abs(x) < 15 && Math.abs(z) < 15) return null; // Avoid city center
-        
+
         const size = 0.3 + Math.random() * 0.8;
-        
+
         return (
-          <mesh 
+          <mesh
             key={`rock-${i}`}
             position={[x, size * 0.3, z]}
             rotation={[
@@ -1004,7 +1003,7 @@ function CityGround({ timeOfDay = 12 }: { timeOfDay?: number }) {
             ]}
           >
             <boxGeometry args={[size, size * 0.6, size * 0.8]} />
-            <meshStandardMaterial 
+            <meshStandardMaterial
               color="#696969"
               roughness={0.95}
               metalness={0.0}
@@ -1017,15 +1016,6 @@ function CityGround({ timeOfDay = 12 }: { timeOfDay?: number }) {
 }
 
 function StreetLamp({ x, z }: { x: number; z: number }) {
-  const beamRef = useRef<THREE.Mesh>(null);
-
-  useFrame(({ clock }) => {
-    if (beamRef.current) {
-      const mat = beamRef.current.material as THREE.MeshBasicMaterial;
-      mat.opacity = 0.04 + Math.sin(clock.elapsedTime * 0.7 + x) * 0.015;
-    }
-  });
-
   return (
     <group position={[x, 0, z]}>
       {/* Pole */}
@@ -1049,26 +1039,15 @@ function StreetLamp({ x, z }: { x: number; z: number }) {
         <meshStandardMaterial color="#FFF9C4" emissive="#FFF176" emissiveIntensity={3} roughness={0.1} />
       </mesh>
       {/* Light cone beam (volumetric illusion) */}
-      <mesh ref={beamRef} position={[0.6, 3.6, 0]} rotation={[0, 0, 0]}>
+      <mesh position={[0.6, 3.6, 0]} rotation={[0, 0, 0]}>
         <coneGeometry args={[1.4, 2.5, 16, 1, true]} />
-        <meshBasicMaterial color="#fffde7" transparent opacity={0.055} side={THREE.FrontSide} depthWrite={false} />
+        <meshBasicMaterial color="#fffde7" transparent opacity={0.045} side={THREE.FrontSide} depthWrite={false} />
       </mesh>
       {/* Ground light pool */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.6, 0.02, 0]}>
         <circleGeometry args={[1.8, 24]} />
         <meshBasicMaterial color="#fff9c4" transparent opacity={0.08} depthWrite={false} />
       </mesh>
-      {/* Actual light source */}
-      <spotLight
-        position={[0.6, 4.78, 0]}
-        angle={0.55}
-        penumbra={0.5}
-        intensity={12}
-        distance={18}
-        color="#FFF8E1"
-        castShadow={false}
-        target-position={[0.6, 0, 0]}
-      />
     </group>
   );
 }
@@ -1125,7 +1104,7 @@ interface DebrisChunk {
 
 function DemolishAnimation({ type, onDone }: { type: string; onDone: () => void }) {
   const groupRef = useRef<THREE.Group>(null);
-  const dustRef  = useRef<THREE.Mesh>(null);
+  const dustRef = useRef<THREE.Mesh>(null);
   const t = useRef(0);
   const done = useRef(false);
 
@@ -1216,8 +1195,21 @@ function DemolishAnimation({ type, onDone }: { type: string; onDone: () => void 
 }
 
 // ─── Placement Ghost ──────────────────────────────────────────────────────────
-function PlacementGhost({ type, onPlace }: { type: string; onPlace: (x: number, z: number) => void }) {
+function PlacementGhost({
+  type,
+  onPlace,
+  territorySize,
+  buildings,
+}: {
+  type: string;
+  onPlace: (x: number, z: number) => void;
+  territorySize: number;
+  buildings: BuildingData[];
+}) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const fillMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const wireMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const validRef = useRef(false);
   const { camera, gl } = useThree();
   const plane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
@@ -1240,12 +1232,20 @@ function PlacementGhost({ type, onPlace }: { type: string; onPlace: (x: number, 
           0,
           Math.round(target.z / 3) * 3,
         );
+        validRef.current = isValidBuildingPosition(
+          type,
+          pos.current.x,
+          pos.current.z,
+          territorySize,
+          buildings,
+        );
       }
     };
 
     const onClick = (e: MouseEvent) => {
       // Only left-click places
       if (e.button !== 0) return;
+      if (!validRef.current) return;
       onPlace(pos.current.x, pos.current.z);
     };
 
@@ -1255,12 +1255,15 @@ function PlacementGhost({ type, onPlace }: { type: string; onPlace: (x: number, 
       canvas.removeEventListener('mousemove', onMove);
       canvas.removeEventListener('click', onClick);
     };
-  }, [camera, gl, plane, raycaster, target, onPlace]);
+  }, [camera, gl, plane, raycaster, target, onPlace, type, territorySize, buildings]);
 
   useFrame(() => {
     if (meshRef.current) {
       meshRef.current.position.lerp(pos.current, 0.25);
     }
+    const color = validRef.current ? '#00F5FF' : '#FF1744';
+    fillMaterialRef.current?.color.set(color);
+    wireMaterialRef.current?.color.set(color);
   });
 
   const sizes: Record<string, [number, number, number]> = {
@@ -1272,8 +1275,8 @@ function PlacementGhost({ type, onPlace }: { type: string; onPlace: (x: number, 
   return (
     <mesh ref={meshRef} position={[0, sh / 2, 0]}>
       <boxGeometry args={[sw, sh, sd]} />
-      <meshStandardMaterial color="#00F5FF" transparent opacity={0.35} wireframe={false} />
-      <meshStandardMaterial color="#00F5FF" transparent opacity={0.6} wireframe />
+      <meshStandardMaterial ref={fillMaterialRef} color="#FF1744" transparent opacity={0.35} wireframe={false} />
+      <meshStandardMaterial ref={wireMaterialRef} color="#FF1744" transparent opacity={0.6} wireframe />
     </mesh>
   );
 }
@@ -1282,6 +1285,7 @@ function PlacementGhost({ type, onPlace }: { type: string; onPlace: (x: number, 
 export default function City3D({
   buildings,
   territorySize = 100,
+  existingBuildings,
   placementType,
   onPlace,
   onBuildingClick,
@@ -1291,6 +1295,7 @@ export default function City3D({
 }: {
   buildings: BuildingData[];
   territorySize?: number;
+  existingBuildings?: BuildingData[];
   placementType?: string | null;
   onPlace?: (x: number, z: number) => void;
   onBuildingClick?: (b: BuildingData, screenX: number, screenY: number) => void;
@@ -1344,7 +1349,12 @@ export default function City3D({
       })}
 
       {placementType && onPlace && (
-        <PlacementGhost type={placementType} onPlace={onPlace} />
+        <PlacementGhost
+          type={placementType}
+          onPlace={onPlace}
+          territorySize={territorySize}
+          buildings={existingBuildings || buildings}
+        />
       )}
     </group>
   );
@@ -1355,7 +1365,7 @@ export default function City3D({
 if (typeof window !== 'undefined') {
   Object.values(MODEL_PATHS).forEach(p => {
     fetch(p, { method: 'HEAD' }).then(r => {
-      if (r.ok) try { useGLTF.preload(p); } catch {}
-    }).catch(() => {});
+      if (r.ok) try { useGLTF.preload(p); } catch { }
+    }).catch(() => { });
   });
 }

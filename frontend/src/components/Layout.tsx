@@ -99,9 +99,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Sidebar — desktop: always visible, mobile: slide in */}
       <motion.aside
-        className={`fixed lg:relative z-40 h-full flex flex-col w-64 glass border-r border-white/5 transition-transform duration-300 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
+        className={`fixed lg:relative z-40 h-full flex flex-col w-64 glass border-r border-white/5 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}
         style={{ borderRadius: 0 }}
         role="navigation"
         aria-label="Main navigation"
@@ -147,15 +146,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   dispatch(toggleSidebar());
                 }
               }}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
-                  isActive
-                    ? 'bg-neon-cyan/10 border border-neon-cyan/20 text-neon-cyan'
-                    : 'text-space-400 hover:text-white hover:bg-white/5 border border-transparent'
+              className={({ isActive }: { isActive: boolean }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
+                  ? 'bg-neon-cyan/10 border border-neon-cyan/20 text-neon-cyan'
+                  : 'text-space-400 hover:text-white hover:bg-white/5 border border-transparent'
                 }`
               }
             >
-              {({ isActive }) => (
+              {({ isActive }: { isActive: boolean }) => (
                 <>
                   <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-neon-cyan' : 'text-current'}`} aria-hidden="true" />
                   <span className="font-body text-sm font-medium">{label}</span>
@@ -234,7 +232,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <nav className="mobile-nav" role="navigation" aria-label="Mobile navigation">
         <div className="mobile-nav-inner">
           {mobileNavItems.map(({ to, icon: Icon, label }) => {
-            const isActive = location.pathname === to || 
+            const isActive = location.pathname === to ||
               (to === '/dashboard' && location.pathname === '/');
             return (
               <NavLink
@@ -256,7 +254,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </NavLink>
             );
           })}
-          
+
           {/* Mobile Menu Button - Unified to open main sidebar */}
           <button
             onClick={() => dispatch(toggleSidebar())}

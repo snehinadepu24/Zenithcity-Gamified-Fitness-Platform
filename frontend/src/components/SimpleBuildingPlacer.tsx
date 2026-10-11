@@ -8,9 +8,9 @@ interface SimpleBuildingPlacerProps {
   onCancel: () => void;
 }
 
-export default function SimpleBuildingPlacer({ 
-  buildingType, 
-  onPlace, 
+export default function SimpleBuildingPlacer({
+  buildingType,
+  onPlace,
   onCancel
 }: SimpleBuildingPlacerProps) {
   const groupRef = useRef<THREE.Group>(null);
@@ -22,17 +22,17 @@ export default function SimpleBuildingPlacer({
 
     // Update raycaster
     raycaster.setFromCamera(pointer, camera);
-    
+
     // Create a ground plane for intersection
     const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const intersectionPoint = new THREE.Vector3();
-    
+
     if (raycaster.ray.intersectPlane(groundPlane, intersectionPoint)) {
       // Snap to grid
       const gridSize = 2;
       const snappedX = Math.round(intersectionPoint.x / gridSize) * gridSize;
       const snappedZ = Math.round(intersectionPoint.z / gridSize) * gridSize;
-      
+
       setPosition(new THREE.Vector3(snappedX, 0.1, snappedZ));
       groupRef.current.position.set(snappedX, 0.1, snappedZ);
     }
@@ -120,29 +120,28 @@ export default function SimpleBuildingPlacer({
       onContextMenu={handleRightClick}
     >
       {getBuildingPreview()}
-      
+
       {/* Simple grid indicator */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
         <planeGeometry args={[2, 2]} />
-        <meshBasicMaterial 
+        <meshBasicMaterial
           color="#ffffff"
-          transparent 
+          transparent
           opacity={0.3}
           side={THREE.DoubleSide}
         />
       </mesh>
-      
+
       {/* Position indicator */}
       <lineSegments>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={4}
-            array={new Float32Array([
+            args={[new Float32Array([
               -1, 0.01, 0, 1, 0.01, 0,
               0, 0.01, -1, 0, 0.01, 1
-            ])}
-            itemSize={3}
+            ]), 3]}
+            count={4}
           />
         </bufferGeometry>
         <lineBasicMaterial color="#00ff00" />

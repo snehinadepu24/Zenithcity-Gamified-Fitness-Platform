@@ -99,4 +99,15 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          three: ['three', '@react-three/fiber', '@react-three/drei'],
+          ui: ['framer-motion', 'lucide-react', 'recharts'],
+        },
+      },
+    },
+  },
 });

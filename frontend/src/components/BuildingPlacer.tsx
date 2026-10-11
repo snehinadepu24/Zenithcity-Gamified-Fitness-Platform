@@ -10,10 +10,10 @@ interface BuildingPlacerProps {
   existingBuildings: Array<{ position_x: number; position_z: number; type: string }>;
 }
 
-export default function BuildingPlacer({ 
-  buildingType, 
-  onPlace, 
-  onCancel, 
+export default function BuildingPlacer({
+  buildingType,
+  onPlace,
+  onCancel,
   territorySize,
   existingBuildings
 }: BuildingPlacerProps) {
@@ -53,7 +53,7 @@ export default function BuildingPlacer({
 
       // Simple distance check
       const distance = Math.sqrt(
-        Math.pow(x - building.position_x, 2) + 
+        Math.pow(x - building.position_x, 2) +
         Math.pow(z - building.position_z, 2)
       );
 
@@ -66,29 +66,29 @@ export default function BuildingPlacer({
 
     // Update raycaster
     raycaster.setFromCamera(pointer, camera);
-    
+
     // Create a ground plane for intersection
     const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const intersectionPoint = new THREE.Vector3();
-    
+
     if (raycaster.ray.intersectPlane(groundPlane, intersectionPoint)) {
       // Snap to grid
       const gridSize = 2;
       const snappedX = Math.round(intersectionPoint.x / gridSize) * gridSize;
       const snappedZ = Math.round(intersectionPoint.z / gridSize) * gridSize;
-      
+
       // Very simple territory check
       const distance = Math.sqrt(snappedX * snappedX + snappedZ * snappedZ);
       const withinBounds = distance <= territoryRadius;
-      
+
       // Simple collision check
       const hasCollision = checkCollision(snappedX, snappedZ);
-      
+
       const isValid = withinBounds && !hasCollision;
-      
+
       setPosition(new THREE.Vector3(snappedX, 0.1, snappedZ));
       setIsValidPosition(isValid);
-      
+
       groupRef.current.position.set(snappedX, 0.1, snappedZ);
     }
   });
@@ -96,7 +96,7 @@ export default function BuildingPlacer({
   const handleClick = useCallback((event: any) => {
     event.stopPropagation();
     console.log('Click detected:', { isValidPosition, position: { x: position.x, z: position.z } });
-    
+
     // Always allow placement for now - we'll add validation back gradually
     onPlace({ x: position.x, z: position.z });
   }, [position, onPlace]);
@@ -189,29 +189,28 @@ export default function BuildingPlacer({
       onContextMenu={handleRightClick}
     >
       {getBuildingPreview()}
-      
+
       {/* Grid indicator */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
         <planeGeometry args={[2, 2]} />
-        <meshBasicMaterial 
+        <meshBasicMaterial
           color="#ffffff"
-          transparent 
+          transparent
           opacity={0.2}
           side={THREE.DoubleSide}
         />
       </mesh>
-      
+
       {/* Position indicator lines */}
       <lineSegments>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
+            args={[new Float32Array([
+              -1, 0.01, 0, 1, 0.01, 0,
+              0, 0.01, -1, 0, 0.01, 1
+            ]), 3]}
             count={4}
-            array={new Float32Array([
-              -1, 0.01, 0, 1, 0.01, 0,  // X axis
-              0, 0.01, -1, 0, 0.01, 1   // Z axis
-            ])}
-            itemSize={3}
           />
         </bufferGeometry>
         <lineBasicMaterial color="#00ff00" />
@@ -223,9 +222,9 @@ export default function BuildingPlacer({
         return (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]}>
             <planeGeometry args={[size.width, size.depth]} />
-            <meshBasicMaterial 
+            <meshBasicMaterial
               color="#00ff00"
-              transparent 
+              transparent
               opacity={0.1}
               side={THREE.DoubleSide}
             />
