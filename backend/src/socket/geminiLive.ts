@@ -104,7 +104,7 @@ Respond ONLY with this JSON (no markdown, no explanation):
 }`;
 
         const response = await ai.models.generateContent({
-          model: 'gemini-2.0-flash',
+          model: 'gemini-3.8-flash',
           contents: prompt,
         });
 

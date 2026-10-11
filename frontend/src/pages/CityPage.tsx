@@ -2,7 +2,8 @@ import { useEffect, useState, Suspense, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, PerformanceMonitor } from '@react-three/drei';
+import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
 import {
   Building2, Plus, ArrowUp, Wrench, Zap, Shield, Map,
   Layers, AlertTriangle, Lock, Clock, Sun, Moon, Trash2, X, MousePointer
@@ -16,6 +17,7 @@ import { addToast } from '../store/slices/uiSlice';
 import { RootState, AppDispatch } from '../store';
 import City3D from '../components/City3D';
 import CitySky from '../components/CitySky';
+import CityPerformance from '../components/CityPerformance';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import * as THREE from 'three';
 
@@ -96,6 +98,8 @@ export default function CityPage() {
   const [selectedBuilding, setSelectedBuilding] = useState<SelectedBuilding | null>(null);
   const [demolishingId, setDemolishingId] = useState<string | null>(null);
   const [lightMode, setLightMode] = useState<'auto' | 'day' | 'night'>('auto');
+  const [renderDpr, setRenderDpr] = useState<[number, number]>([1, 1.5]);
+  const [cityFps, setCityFps] = useState(0);
 
   const systemHour = new Date().getHours();
   const isDay = lightMode === 'day' || (lightMode === 'auto' && systemHour >= 6 && systemHour < 20);
@@ -234,10 +238,14 @@ export default function CityPage() {
           camera={{ position: [22, 18, 22], fov: 48 }}
           style={{ background: '#020818' }}
           shadows
-          dpr={[1, 2]} // Limit device pixel ratio for performance
+          dpr={renderDpr}
           performance={{ min: 0.5 }} // Allow frame rate to drop to maintain performance
         >
           <Suspense fallback={null}>
+            <PerformanceMonitor
+              onChange={({ factor }) => setRenderDpr(factor < 0.7 ? [0.75, 1] : [1, 1.5])}
+            />
+            <CityPerformance onSample={(sample) => setCityFps(sample.fps)} />
             <CitySky isDay={isDay} />
             <ambientLight intensity={ambientIntensity} />
             <hemisphereLight args={[isDay ? '#87ceeb' : '#0a1628', isDay ? '#4a7c23' : '#1a2a4a', isDay ? 0.9 : 0.3]} />
@@ -266,6 +274,10 @@ export default function CityPage() {
               enableZoom
               maxPolarAngle={Math.PI / 2.1} minDistance={5} maxDistance={60}
             />
+            <EffectComposer multisampling={0}>
+              <Bloom luminanceThreshold={1.15} intensity={0.3} mipmapBlur />
+              <Vignette eskil={false} offset={0.12} darkness={0.3} />
+            </EffectComposer>
           </Suspense>
         </Canvas>
 
@@ -297,8 +309,8 @@ export default function CityPage() {
                 key={mode}
                 onClick={() => setLightMode(mode)}
                 className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono transition-all ${lightMode === mode
-                    ? 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30'
-                    : 'text-space-400 hover:text-white'
+                  ? 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30'
+                  : 'text-space-400 hover:text-white'
                   }`}
               >
                 {mode === 'day' && <Sun className="w-3 h-3" />}
@@ -315,6 +327,9 @@ export default function CityPage() {
           <div className="glass-sm px-3 py-2 flex items-center gap-2 text-xs font-mono">
             <Zap className="w-3.5 h-3.5 text-neon-yellow" />
             <span className="text-neon-yellow font-bold">{balance.toLocaleString()} pts</span>
+          </div>
+          <div className="glass-sm mt-2 px-3 py-1.5 text-[10px] font-mono text-space-400 text-right">
+            {cityFps > 0 ? `${cityFps} FPS` : 'Measuring...'}
           </div>
         </div>
 
@@ -451,8 +466,8 @@ export default function CityPage() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
                     className={`px-4 py-2 text-xs font-display font-semibold tracking-wider uppercase rounded-lg transition-all ${activeTab === tab.id
-                        ? 'bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/30'
-                        : 'text-space-400 hover:text-white'
+                      ? 'bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/30'
+                      : 'text-space-400 hover:text-white'
                       }`}
                   >
                     {tab.label}
@@ -473,10 +488,10 @@ export default function CityPage() {
                           key={bt.id}
                           onClick={() => setSelectedType(bt.id)}
                           className={`relative p-3 rounded-xl border text-left transition-all ${isSelected
-                              ? 'border-neon-cyan/60 bg-neon-cyan/8 ring-1 ring-neon-cyan/20'
-                              : affordable
-                                ? 'border-space-600/40 hover:border-space-400 hover:bg-white/3'
-                                : 'border-space-700/30 opacity-50 cursor-not-allowed'
+                            ? 'border-neon-cyan/60 bg-neon-cyan/8 ring-1 ring-neon-cyan/20'
+                            : affordable
+                              ? 'border-space-600/40 hover:border-space-400 hover:bg-white/3'
+                              : 'border-space-700/30 opacity-50 cursor-not-allowed'
                             }`}
                           disabled={!affordable}
                           title={!affordable ? `Need ${bt.cost - balance} more points` : ''}
@@ -521,8 +536,8 @@ export default function CityPage() {
                       onClick={handleStartPlacement}
                       disabled={constructing || !canAffordSelected}
                       className={`px-6 py-3 rounded-xl font-display font-semibold text-sm uppercase tracking-widest flex items-center gap-2 transition-all ${canAffordSelected && !placementMode
-                          ? 'btn-primary'
-                          : 'bg-space-800/50 border border-space-700/30 text-space-600 cursor-not-allowed'
+                        ? 'btn-primary'
+                        : 'bg-space-800/50 border border-space-700/30 text-space-600 cursor-not-allowed'
                         }`}
                     >
                       {constructing
@@ -565,8 +580,8 @@ export default function CityPage() {
                     <button
                       onClick={() => setIsDragMode(!isDragMode)}
                       className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${isDragMode
-                          ? 'bg-neon-green/20 border border-neon-green/40 text-neon-green'
-                          : 'bg-space-700/50 border border-space-600/40 text-space-300 hover:bg-space-600/50'
+                        ? 'bg-neon-green/20 border border-neon-green/40 text-neon-green'
+                        : 'bg-space-700/50 border border-space-600/40 text-space-300 hover:bg-space-600/50'
                         }`}
                     >
                       {isDragMode ? '✓ Drag Mode ON' : 'Enable Drag Mode'}
@@ -623,8 +638,8 @@ export default function CityPage() {
                               onClick={() => handleRepair(b.id)}
                               disabled={balance < 200}
                               className={`text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all ${balance >= 200
-                                  ? 'bg-neon-pink/10 border border-neon-pink/40 text-neon-pink hover:bg-neon-pink/20'
-                                  : 'bg-space-800 border border-space-700 text-space-600 cursor-not-allowed'
+                                ? 'bg-neon-pink/10 border border-neon-pink/40 text-neon-pink hover:bg-neon-pink/20'
+                                : 'bg-space-800 border border-space-700 text-space-600 cursor-not-allowed'
                                 }`}
                             >
                               <Wrench className="w-3 h-3" /> Repair
@@ -678,8 +693,8 @@ export default function CityPage() {
                                   disabled={!canUpgrade}
                                   title={!canUpgrade ? `Need ${upgradeCost} pts` : `Upgrade for ${upgradeCost} pts`}
                                   className={`text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all ${canUpgrade
-                                      ? 'bg-space-700/50 border border-space-500/50 text-white hover:border-neon-cyan/40 hover:text-neon-cyan'
-                                      : 'bg-space-800 border border-space-700 text-space-600 cursor-not-allowed'
+                                    ? 'bg-space-700/50 border border-space-500/50 text-white hover:border-neon-cyan/40 hover:text-neon-cyan'
+                                    : 'bg-space-800 border border-space-700 text-space-600 cursor-not-allowed'
                                     }`}
                                 >
                                   <ArrowUp className="w-3 h-3" />

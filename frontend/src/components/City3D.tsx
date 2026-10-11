@@ -12,9 +12,15 @@
 
 import React, { useRef, useMemo, Suspense, useEffect, useState, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useGLTF, Float } from '@react-three/drei';
+import { useGLTF, Float, Detailed } from '@react-three/drei';
 import * as THREE from 'three';
-import { isValidBuildingPosition } from '../utils/buildingSpecs';
+import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
+import { getBuildingFootprint, isValidBuildingPosition } from '../utils/buildingSpecs';
+import InstancedCityProps from './InstancedCityProps';
+
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree as unknown as typeof THREE.BufferGeometry.prototype.computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -341,14 +347,14 @@ function Park({ level, damaged, timeOfDay = 12 }: { level: number; damaged: bool
       </mesh>
 
       {/* Paths */}
-      {[0, Math.PI / 2].map((ry, i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, ry]} position={[0, 0.04, 0]}>
+      {[0, Math.PI / 2].map((rotation, index) => (
+        <mesh key={index} rotation={[-Math.PI / 2, 0, rotation]} position={[0, 0.04, 0]}>
           <planeGeometry args={[radius * 2, 0.35]} />
           <meshStandardMaterial color="#C8B89A" roughness={0.9} />
         </mesh>
       ))}
 
-      {/* Fountain base */}
+      {/* Fountain */}
       <mesh position={[0, 0.2, 0]} castShadow>
         <cylinderGeometry args={[0.65, 0.75, 0.4, 16]} />
         <meshStandardMaterial color="#9E9E9E" roughness={0.3} metalness={0.2} />
@@ -369,8 +375,8 @@ function Park({ level, damaged, timeOfDay = 12 }: { level: number; damaged: bool
       )}
 
       {/* Benches */}
-      {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((a, i) => (
-        <group key={i} position={[Math.cos(a) * radius * 0.6, 0, Math.sin(a) * radius * 0.6]} rotation={[0, a, 0]}>
+      {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((angle, index) => (
+        <group key={index} position={[Math.cos(angle) * radius * 0.6, 0, Math.sin(angle) * radius * 0.6]} rotation={[0, angle, 0]}>
           <mesh position={[0, 0.3, 0]} castShadow>
             <boxGeometry args={[0.6, 0.07, 0.25]} />
             <meshStandardMaterial color="#8D6E63" roughness={0.8} />
@@ -386,7 +392,7 @@ function Park({ level, damaged, timeOfDay = 12 }: { level: number; damaged: bool
         </group>
       ))}
 
-      {/* Trees */}
+      {/* Park trees remain unique because their level changes their silhouette. */}
       {treePos.map((t, i) => (
         <group key={i} position={[t.x, 0, t.z]}>
           <mesh position={[0, t.h * 0.5, 0]} castShadow>
@@ -899,34 +905,6 @@ function CityGround({ timeOfDay = 12 }: { timeOfDay?: number }) {
         ))
       )}
 
-      {/* Add some decorative elements */}
-      {/* Trees around the city */}
-      {Array.from({ length: 8 }, (_, i) => { // Reduced from 15 to 8
-        const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.5;
-        const radius = 35 + Math.random() * 15;
-        const x = Math.cos(angle) * radius;
-        const z = Math.sin(angle) * radius;
-        const height = 3 + Math.random() * 4;
-
-        return (
-          <group key={`tree-${i}`} position={[x, 0, z]}>
-            {/* Tree trunk */}
-            <mesh position={[0, height * 0.3, 0]}>
-              <cylinderGeometry args={[0.2, 0.3, height * 0.6, 8]} />
-              <meshStandardMaterial color="#8B4513" roughness={0.9} />
-            </mesh>
-            {/* Tree foliage */}
-            <mesh position={[0, height * 0.8, 0]}>
-              <sphereGeometry args={[height * 0.4, 8, 6]} />
-              <meshStandardMaterial
-                color={timeOfDay >= 6 && timeOfDay < 18 ? "#228B22" : "#1a5a1a"}
-                roughness={0.8}
-              />
-            </mesh>
-          </group>
-        );
-      })}
-
       {/* Small flower patches */}
       {Array.from({ length: 10 }, (_, i) => { // Reduced from 20 to 10
         const x = (Math.random() - 0.5) * 80;
@@ -1281,6 +1259,50 @@ function PlacementGhost({
   );
 }
 
+function BVHBuilding({ children }: { children: React.ReactNode }) {
+  const groupRef = useRef<THREE.Group>(null);
+
+  useEffect(() => {
+    const geometries: THREE.BufferGeometry[] = [];
+    groupRef.current?.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const geometry = object.geometry as THREE.BufferGeometry & {
+        computeBoundsTree?: () => void;
+        disposeBoundsTree?: () => void;
+      };
+      geometry.computeBoundsTree?.();
+      geometries.push(geometry);
+    });
+
+    return () => geometries.forEach((geometry) => geometry.disposeBoundsTree?.());
+  }, [children]);
+
+  return <group ref={groupRef}>{children}</group>;
+}
+
+function LowDetailBuilding({ type, level, damaged }: { type: string; level: number; damaged: boolean }) {
+  const footprint = getBuildingFootprint(type);
+  const height = type === 'office' ? 4 + level * 1.5 : type === 'apartment' ? 3 + level : 1.8 + level * 0.35;
+  return (
+    <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
+      <boxGeometry args={[footprint.width, height, footprint.depth]} />
+      <meshStandardMaterial color={damaged ? '#4a4a4a' : type === 'park' ? '#3c7f35' : '#5f7180'} roughness={0.9} />
+    </mesh>
+  );
+}
+
+function BuildingLOD({ type, level, damaged, timeOfDay }: { type: string; level: number; damaged: boolean; timeOfDay: number }) {
+  return (
+    <Detailed distances={[0, 24, 50]}>
+      <BVHBuilding>
+        <BuildingContent type={type} level={level} damaged={damaged} timeOfDay={timeOfDay} />
+      </BVHBuilding>
+      <LowDetailBuilding type={type} level={level} damaged={damaged} />
+      <LowDetailBuilding type={type} level={Math.max(1, Math.min(level, 2))} damaged={damaged} />
+    </Detailed>
+  );
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function City3D({
   buildings,
@@ -1308,9 +1330,7 @@ export default function City3D({
       <CityGround timeOfDay={timeOfDay} />
       <TerritoryBoundary size={territorySize} />
 
-      {[-10, 0, 10].flatMap(x => [-10, 0, 10].map(z => (
-        <StreetLamp key={`l${x}${z}`} x={x + 1.2} z={z + 1.2} />
-      )))}
+      <InstancedCityProps buildings={buildings} timeOfDay={timeOfDay} />
 
       {buildings.map(b => {
         const isDemolishing = demolishingId === b.id;
@@ -1329,7 +1349,7 @@ export default function City3D({
             ) : b.status === 'under_construction' ? (
               <UnderConstruction type={b.type} />
             ) : (
-              <BuildingContent type={b.type} level={b.level} damaged={b.status === 'damaged'} />
+              <BuildingLOD type={b.type} level={b.level} damaged={b.status === 'damaged'} timeOfDay={timeOfDay} />
             )}
             {b.status === 'damaged' && !isDemolishing && (
               <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]}>
